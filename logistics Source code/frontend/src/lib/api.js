@@ -48,9 +48,9 @@ const MOCK_FALLBACKS = {
       { shipment_id: "TS-20260003", origin: "Ningbo Port", destination: "Hamburg Port", origin_coords: [29.86, 121.54], dest_coords: [53.55, 9.99], risk_category: "High", status: "Delayed" }
     ],
     ports: [
-      { name: "Shanghai Port", lat: 31.23, lon: 121.47, status: "Congested" },
-      { name: "Singapore Port", lat: 1.35, lon: 103.81, status: "Normal" },
-      { name: "Rotterdam Port", lat: 51.92, lon: 4.47, status: "Normal" }
+      { name: "Shanghai Port", code: "SHA", lat: 31.23, lng: 121.47, lon: 121.47, congestion: 45, status: "Congested" },
+      { name: "Singapore Port", code: "SIN", lat: 1.35, lng: 103.81, lon: 103.81, congestion: 18, status: "Normal" },
+      { name: "Rotterdam Port", code: "RTM", lat: 51.92, lng: 4.47, lon: 4.47, congestion: 22, status: "Normal" }
     ],
     prediction_chart: [
       { day: "Mon", historical_eta: 14, predicted_eta: 16, delay_probability: 35 },
