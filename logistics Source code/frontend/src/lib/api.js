@@ -177,6 +177,40 @@ const MOCK_FALLBACKS = {
       }
     ]
   },
+  "/geopolitical/events": {
+    events: [
+      {
+        id: "EVT-8801",
+        title: "Singapore Port Anchorage Congestion",
+        location: "Singapore Port",
+        event_type: "Port Closure",
+        severity: "High",
+        detected_at: "2026-08-28T06:00:00Z",
+        summary: "Berth dwell time exceeded 3.8 days due to monsoon storm backlog.",
+        confidence: 0.95
+      },
+      {
+        id: "EVT-8802",
+        title: "Strait of Hormuz Security Advisory",
+        location: "Strait of Hormuz",
+        event_type: "Conflict",
+        severity: "Warning",
+        detected_at: "2026-08-28T05:30:00Z",
+        summary: "Naval security Level 3 advisory active for commercial vessels.",
+        confidence: 0.88
+      },
+      {
+        id: "EVT-8803",
+        title: "South China Sea Typhoon Warning",
+        location: "South China Sea",
+        event_type: "Weather",
+        severity: "High",
+        detected_at: "2026-08-28T04:15:00Z",
+        summary: "Tropical Storm Gaemi causing 45-knot winds across East Asia shipping lanes.",
+        confidence: 0.92
+      }
+    ]
+  },
   "/integrations": {
     integrations: [
       { id: "shopify", name: "Shopify Plus", category: "E-commerce", description: "Bi-directional order sync", connected: true, records_synced: 18420, latency_ms: 38, health: "99.9%" },
@@ -195,12 +229,28 @@ const MOCK_FALLBACKS = {
       {
         id: "REC-901",
         shipment_id: "TS-20260001",
-        issue: "Singapore Port Anchorage Delay (3.5 Days)",
-        recommended_action: "Reroute via Cape of Good Hope Bypass",
-        estimated_delay_saved: "2.4 Days",
-        estimated_cost: "₹18,400",
-        cost_avoidance: "₹166,600",
-        status: "pending"
+        action: "Reroute via Cape of Good Hope Bypass",
+        status: "pending",
+        reasons: [
+          "Berth dwell time > 3.8 days at Singapore Anchorage",
+          "Risk score 82 exceeds threshold 70"
+        ],
+        explanation: "Alternate routing via Cape of Good Hope bypasses Singapore berth queue, reducing total transit delay by 2.4 days with net ROI of ₹148,200.",
+        expected_outcome: { eta: "down", risk: "down", cost: "down" },
+        confidence: 94
+      },
+      {
+        id: "REC-902",
+        shipment_id: "TS-20260003",
+        action: "Expedite Customs EDI Clearance at Ningbo",
+        status: "pending",
+        reasons: [
+          "HS Code classification flag detected",
+          "Potential 2.8 day customs hold"
+        ],
+        explanation: "Pre-submit verified Origin Certificate to Ningbo Customs portal to clear automated hold.",
+        expected_outcome: { eta: "down", risk: "down", cost: "down" },
+        confidence: 89
       }
     ]
   },
@@ -221,25 +271,31 @@ const MOCK_FALLBACKS = {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    const url = error.config?.url || "";
+    const rawUrl = error.config?.url || "";
+    const url = rawUrl.split("?")[0];
+    
     // 1. Exact or partial route matching
     for (const [route, mockData] of Object.entries(MOCK_FALLBACKS)) {
-      if (url.includes(route)) {
+      if (url.includes(route) || rawUrl.includes(route)) {
         console.warn(`[Vercel Standalone Mode] Serving fallback vector data for: ${route}`);
         return Promise.resolve({ data: mockData, status: 200, statusText: "OK", headers: {}, config: error.config });
       }
     }
 
     // 2. Smart catch-all fallback for secondary routes
-    console.warn(`[Vercel Standalone Mode] Serving smart fallback for route: ${url}`);
+    console.warn(`[Vercel Standalone Mode] Serving smart fallback for route: ${rawUrl}`);
     let fallbackData = {};
-    if (url.includes("/generate") || url.includes("/validate") || url.includes("/simulate")) {
+    if (rawUrl.includes("/generate") || rawUrl.includes("/validate") || rawUrl.includes("/simulate")) {
       fallbackData = { workflow: MOCK_FALLBACKS["/workflows"].workflows[0], simulation: { shipments_evaluated: 50, trigger_matches: 50, actions_simulated: 49, estimated_delay_reduction_days: 2.4, estimated_cost_impact: 166600, hours_saved: 172 } };
-    } else if (url.includes("/conflicts")) {
+    } else if (rawUrl.includes("/conflicts")) {
       fallbackData = MOCK_FALLBACKS["/workflows/conflicts/all"];
-    } else if (url.includes("/opportunities")) {
+    } else if (rawUrl.includes("/opportunities")) {
       fallbackData = MOCK_FALLBACKS["/workflows/opportunities"];
-    } else if (url.includes("/analytics")) {
+    } else if (rawUrl.includes("/geopolitical") || rawUrl.includes("/events")) {
+      fallbackData = MOCK_FALLBACKS["/geopolitical/events"];
+    } else if (rawUrl.includes("/recovery") || rawUrl.includes("/recommendations")) {
+      fallbackData = MOCK_FALLBACKS["/recovery/recommendations"];
+    } else if (rawUrl.includes("/analytics")) {
       fallbackData = MOCK_FALLBACKS["/workflows/analytics"];
     } else {
       fallbackData = { status: "success", message: "Processed in Standalone Enterprise Demo Mode", items: [], total: 0 };
