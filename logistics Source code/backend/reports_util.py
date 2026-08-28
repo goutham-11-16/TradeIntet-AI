@@ -1,0 +1,156 @@
+"""Polished PDF report generation (branded cover + chart) using ReportLab."""
+import io
+from datetime import datetime
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import (
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable, PageBreak, Flowable,
+)
+from reportlab.graphics.shapes import Drawing, Rect, String
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+
+NAVY = colors.HexColor("#020617")
+BLUE = colors.HexColor("#2563EB")
+SLATE = colors.HexColor("#475569")
+LIGHT = colors.HexColor("#F1F5F9")
+BORDER = colors.HexColor("#E2E8F0")
+RISK_COLORS = {"Low": colors.HexColor("#10B981"), "Moderate": colors.HexColor("#F59E0B"),
+               "High": colors.HexColor("#F97316"), "Critical": colors.HexColor("#EF4444")}
+
+TITLES = {
+    "shipment-risk": "Shipment Risk Report", "disruption": "Disruption Report",
+    "cost-impact": "Cost Impact Report", "carrier-performance": "Carrier Performance Report",
+    "customs": "Customs Report", "executive-summary": "Executive Summary",
+}
+
+
+class Logo(Flowable):
+    """Simple vector shield 'logo' + brand wordmark."""
+    def __init__(self, width=180, height=44):
+        super().__init__()
+        self.width, self.height = width, height
+
+    def draw(self):
+        c = self.canv
+        c.setFillColor(BLUE)
+        c.roundRect(0, 6, 32, 32, 6, fill=1, stroke=0)
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica-Bold", 20)
+        c.drawCentredString(16, 14, "T")
+        c.setFillColor(NAVY)
+        c.setFont("Helvetica-Bold", 20)
+        c.drawString(42, 15, "TradeIntel AI")
+
+
+def _risk_chart(dist: list[dict]) -> Drawing:
+    d = Drawing(460, 190)
+    d.add(Rect(0, 0, 460, 190, fillColor=colors.white, strokeColor=BORDER, strokeWidth=1))
+    chart = VerticalBarChart()
+    chart.x, chart.y, chart.width, chart.height = 45, 35, 370, 120
+    values = [[item["value"] for item in dist]]
+    chart.data = values
+    chart.categoryAxis.categoryNames = [item["name"] for item in dist]
+    chart.categoryAxis.labels.fontName = "Helvetica"
+    chart.categoryAxis.labels.fontSize = 9
+    chart.valueAxis.valueMin = 0
+    chart.valueAxis.labels.fontName = "Helvetica"
+    chart.valueAxis.labels.fontSize = 8
+    chart.bars[0].fillColor = BLUE
+    for i, item in enumerate(dist):
+        try:
+            chart.bars[(0, i)].fillColor = RISK_COLORS.get(item["name"], BLUE)
+        except Exception:
+            pass
+    chart.barWidth = 14
+    d.add(chart)
+    d.add(String(45, 168, "Shipments by Risk Category", fontName="Helvetica-Bold", fontSize=10, fillColor=NAVY))
+    return d
+
+
+def _cover(story, styles, report_type, summary):
+    h = ParagraphStyle("H", parent=styles["Title"], textColor=NAVY, fontSize=30, spaceAfter=4, alignment=0, leading=34)
+    sub = ParagraphStyle("S", parent=styles["Normal"], textColor=SLATE, fontSize=12, spaceAfter=2)
+    meta = ParagraphStyle("M", parent=styles["Normal"], textColor=BLUE, fontSize=11, spaceAfter=2)
+    stat = ParagraphStyle("ST", parent=styles["Normal"], textColor=NAVY, fontSize=10, leading=16)
+
+    story.append(Spacer(1, 30))
+    story.append(Logo())
+    story.append(Spacer(1, 26))
+    story.append(Paragraph(TITLES.get(report_type, "Report"), h))
+    story.append(Paragraph("AI-Powered Cross-Border Logistics Resilience Platform", sub))
+    story.append(HRFlowable(width="100%", thickness=2, color=BLUE, spaceBefore=10, spaceAfter=10))
+
+    if summary:
+        story.append(Paragraph(f"Reporting period: <b>{summary.get('period_start')} — {summary.get('period_end')}</b>", meta))
+        story.append(Spacer(1, 14))
+        cells = [
+            [Paragraph(f"<b>Total Shipments</b><br/>{summary.get('total')}", stat),
+             Paragraph(f"<b>Active</b><br/>{summary.get('active')}", stat),
+             Paragraph(f"<b>High / Critical Risk</b><br/>{summary.get('high_risk')}", stat),
+             Paragraph(f"<b>Active Disruptions</b><br/>{summary.get('disruptions')}", stat),
+             Paragraph(f"<b>Avg Risk Score</b><br/>{summary.get('avg_risk')}/100", stat)],
+        ]
+        t = Table(cells, colWidths=[(A4[0] - 32 * mm) / 5] * 5)
+        t.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.5, BORDER), ("INNERGRID", (0, 0), (-1, -1), 0.5, BORDER),
+            ("BACKGROUND", (0, 0), (-1, -1), LIGHT), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 10), ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.append(t)
+        story.append(Spacer(1, 18))
+        if summary.get("risk_distribution"):
+            story.append(_risk_chart(summary["risk_distribution"]))
+
+    story.append(Spacer(1, 20))
+    story.append(Paragraph(
+        "Confidential — generated by TradeIntel AI. Figures are model estimates and risk indicators, "
+        "not guarantees or legal/compliance certification.",
+        ParagraphStyle("N", parent=styles["Normal"], fontSize=8, textColor=SLATE)))
+    story.append(PageBreak())
+
+
+def build_pdf(report_type: str, rows: list[dict], generated_at: str, summary: dict | None = None) -> bytes:
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=18 * mm, bottomMargin=16 * mm,
+                            leftMargin=16 * mm, rightMargin=16 * mm, title=TITLES.get(report_type, "Report"))
+    styles = getSampleStyleSheet()
+    cell = ParagraphStyle("C", parent=styles["Normal"], fontSize=8.5, textColor=NAVY, leading=11)
+    h2 = ParagraphStyle("H2", parent=styles["Heading2"], textColor=NAVY, fontSize=15)
+    meta = ParagraphStyle("M", parent=styles["Normal"], textColor=SLATE, fontSize=9, spaceAfter=8)
+
+    story = []
+    _cover(story, styles, report_type, summary)
+
+    story.append(Paragraph(TITLES.get(report_type, "Report") + " — Detail", h2))
+    ts = generated_at
+    try:
+        ts = datetime.fromisoformat(generated_at).strftime("%b %d, %Y %H:%M UTC")
+    except Exception:
+        pass
+    story.append(Paragraph(f"Generated {ts} &nbsp;•&nbsp; {len(rows)} records", meta))
+    story.append(HRFlowable(width="100%", thickness=1, color=BORDER, spaceAfter=10))
+
+    if rows:
+        headers = list(rows[0].keys())
+        data = [[Paragraph(f"<b>{hh}</b>", ParagraphStyle('hd', parent=cell, textColor=colors.white)) for hh in headers]]
+        for r in rows:
+            data.append([Paragraph(str(r.get(k, "")), cell) for k in headers])
+        col_w = (A4[0] - 32 * mm) / len(headers)
+        table = Table(data, colWidths=[col_w] * len(headers), repeatRows=1)
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT]),
+            ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(table)
+    else:
+        story.append(Paragraph("No data available for this report.", cell))
+
+    doc.build(story)
+    return buf.getvalue()

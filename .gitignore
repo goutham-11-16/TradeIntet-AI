@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Python & Bytecode
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Local Database & Logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+**/vectordb.sqlite
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+
+# Local Environment Configs
+.env
+.env.local
