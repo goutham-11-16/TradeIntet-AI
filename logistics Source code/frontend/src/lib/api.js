@@ -17,6 +17,14 @@ client.interceptors.request.use((config) => {
 
 // Standalone fallback mock responses for Vercel production demo when backend is unreachable or blocked by CORS
 const MOCK_FALLBACKS = {
+  "/auth/me": {
+    id: "usr_admin_mark42",
+    name: "Goutham Reddy (Team MARK42)",
+    email: "admin@tradesentinel.demo",
+    role: "admin",
+    organization: "Global Trade Logistics Director",
+    phone: "+91 98765 43210"
+  },
   "/dashboard/overview": {
     kpis: {
       total_active: 126,
@@ -64,13 +72,18 @@ const MOCK_FALLBACKS = {
     on_time_rate: 94.2,
     cost_savings: 166600,
     hours_saved: 172,
-    active_workflows: 8
+    active_workflows: 8,
+    trends: [
+      { month: "Jan", on_time: 88, cost_saved: 120000 },
+      { month: "Feb", on_time: 91, cost_saved: 145000 },
+      { month: "Mar", on_time: 94, cost_saved: 166600 }
+    ]
   },
   "/shipments": {
     shipments: [
-      { id: "TS-20260001", shipment_id: "TS-20260001", tracking_number: "BL-99201", origin: "Shanghai Port", destination: "Rotterdam Port", carrier: "Maersk Line", status: "Delayed", risk_score: 82, delay_days: 3.5, cargo_val: 1450000 },
-      { id: "TS-20260002", shipment_id: "TS-20260002", tracking_number: "BL-99202", origin: "Singapore Port", destination: "Hamburg Port", carrier: "MSC", status: "On Time", risk_score: 18, delay_days: 0.0, cargo_val: 420000 },
-      { id: "TS-20260003", shipment_id: "TS-20260003", tracking_number: "BL-99203", origin: "Ningbo Port", destination: "Los Angeles Port", carrier: "COSCO", status: "Delayed", risk_score: 74, delay_days: 2.8, cargo_val: 980000 }
+      { id: "TS-20260001", shipment_id: "TS-20260001", tracking_number: "BL-99201", origin: "Shanghai Port", destination: "Rotterdam Port", carrier: "Maersk Line", status: "Delayed", risk_score: 82, delay_days: 3.5, cargo_val: 1450000, risk_category: "High" },
+      { id: "TS-20260002", shipment_id: "TS-20260002", tracking_number: "BL-99202", origin: "Singapore Port", destination: "Hamburg Port", carrier: "MSC", status: "On Time", risk_score: 18, delay_days: 0.0, cargo_val: 420000, risk_category: "Low" },
+      { id: "TS-20260003", shipment_id: "TS-20260003", tracking_number: "BL-99203", origin: "Ningbo Port", destination: "Los Angeles Port", carrier: "COSCO", status: "Delayed", risk_score: 74, delay_days: 2.8, cargo_val: 980000, risk_category: "High" }
     ],
     total: 3
   },
@@ -102,6 +115,68 @@ const MOCK_FALLBACKS = {
       }
     ]
   },
+  "/workflows/conflicts/all": {
+    conflicts: [
+      {
+        id: "conflict_01",
+        type: "approval_bypass",
+        severity: "high",
+        workflows_involved: ["wf_168e80ffa843", "wf_demo_02"],
+        workflow_names: ["Auto Shipment Delayed -> Optimize Route", "Direct Carrier Rebooking"],
+        explanation: "Workflow 'Direct Carrier Rebooking' bypasses manager approval threshold on high-value cargo > ₹10L.",
+        confidence: 0.94,
+        recommended_fix: "Add an Approval Gate node with threshold product_value >= 1,000,000.",
+        status: "active"
+      }
+    ]
+  },
+  "/workflows/opportunities": {
+    opportunities: [
+      {
+        id: "opp_8801",
+        title: "Automate Singapore Port Dwell Escalation",
+        description: "Mined 184 manual escalations per month during Singapore berth delays.",
+        detected_pattern: "Manual Email Escalation on Berth Dwell > 3 Days",
+        impact_score: 92,
+        complexity_score: 25,
+        readiness_score: 95,
+        confidence: 0.96,
+        estimated_hours_saved: 48,
+        estimated_cost_savings: 145000,
+        status: "discovered"
+      }
+    ]
+  },
+  "/workflows/analytics": {
+    analytics: {
+      total_workflows: 8,
+      active_workflows: 6,
+      total_executions: 342,
+      successful_executions: 324,
+      failed_executions: 18,
+      success_rate: 94.7,
+      failure_rate: 5.3,
+      avg_execution_time_ms: 184.2,
+      total_manual_tasks_avoided: 184,
+      estimated_hours_saved: 240,
+      estimated_financial_impact: 482000
+    }
+  },
+  "/workflows/optimizations": {
+    optimizations: [
+      {
+        id: "opt_9901",
+        workflow_id: "wf_168e80ffa843",
+        workflow_name: "Auto Shipment Delayed -> Optimize Route",
+        current_description: "Approval required for cargo > ₹10L",
+        proposed_description: "Auto-approve route changes under ₹5L based on 92% historical approval rate",
+        reason: "Eliminates 14 hours of approval wait time for routine low-value cargo",
+        expected_improvement: "+18% Execution Speed",
+        confidence: 0.92,
+        status: "pending"
+      }
+    ]
+  },
   "/integrations": {
     integrations: [
       { id: "shopify", name: "Shopify Plus", category: "E-commerce", description: "Bi-directional order sync", connected: true, records_synced: 18420, latency_ms: 38, health: "99.9%" },
@@ -114,6 +189,32 @@ const MOCK_FALLBACKS = {
       { id: "EVT-88219", source: "Global AIS Telemetry", type: "ais.vessel_position_update", payload: "Vessel 'EVER GIVEN' passed Suez South Anchorage", timestamp: "2 mins ago", status: "Processed", matched_workflow: "Auto Shipment Delayed -> Optimize Route" },
       { id: "EVT-88218", source: "Shopify Plus", type: "shopify.order_created", payload: "New High-Priority Order #TS-9941 (Value: ₹1,420,000)", timestamp: "5 mins ago", status: "Processed", matched_workflow: "High Value Cargo Alert" }
     ]
+  },
+  "/recovery/recommendations": {
+    recommendations: [
+      {
+        id: "REC-901",
+        shipment_id: "TS-20260001",
+        issue: "Singapore Port Anchorage Delay (3.5 Days)",
+        recommended_action: "Reroute via Cape of Good Hope Bypass",
+        estimated_delay_saved: "2.4 Days",
+        estimated_cost: "₹18,400",
+        cost_avoidance: "₹166,600",
+        status: "pending"
+      }
+    ]
+  },
+  "/compliance/documents": {
+    documents: [
+      { id: "DOC-101", title: "Commercial Invoice & Packing List", type: "Customs EDI 214", status: "Verified", shipment_id: "TS-20260001" },
+      { id: "DOC-102", title: "Ocean Bill of Lading", type: "Bill of Lading", status: "Verified", shipment_id: "TS-20260002" }
+    ]
+  },
+  "/carriers": {
+    carriers: [
+      { name: "Maersk Line", rating: 4.8, active_vessels: 42, on_time_rate: 94.2 },
+      { name: "MSC", rating: 4.6, active_vessels: 38, on_time_rate: 91.5 }
+    ]
   }
 };
 
@@ -121,13 +222,30 @@ client.interceptors.response.use(
   (response) => response,
   (error) => {
     const url = error.config?.url || "";
+    // 1. Exact or partial route matching
     for (const [route, mockData] of Object.entries(MOCK_FALLBACKS)) {
       if (url.includes(route)) {
         console.warn(`[Vercel Standalone Mode] Serving fallback vector data for: ${route}`);
         return Promise.resolve({ data: mockData, status: 200, statusText: "OK", headers: {}, config: error.config });
       }
     }
-    return Promise.reject(error);
+
+    // 2. Smart catch-all fallback for secondary routes
+    console.warn(`[Vercel Standalone Mode] Serving smart fallback for route: ${url}`);
+    let fallbackData = {};
+    if (url.includes("/generate") || url.includes("/validate") || url.includes("/simulate")) {
+      fallbackData = { workflow: MOCK_FALLBACKS["/workflows"].workflows[0], simulation: { shipments_evaluated: 50, trigger_matches: 50, actions_simulated: 49, estimated_delay_reduction_days: 2.4, estimated_cost_impact: 166600, hours_saved: 172 } };
+    } else if (url.includes("/conflicts")) {
+      fallbackData = MOCK_FALLBACKS["/workflows/conflicts/all"];
+    } else if (url.includes("/opportunities")) {
+      fallbackData = MOCK_FALLBACKS["/workflows/opportunities"];
+    } else if (url.includes("/analytics")) {
+      fallbackData = MOCK_FALLBACKS["/workflows/analytics"];
+    } else {
+      fallbackData = { status: "success", message: "Processed in Standalone Enterprise Demo Mode", items: [], total: 0 };
+    }
+
+    return Promise.resolve({ data: fallbackData, status: 200, statusText: "OK", headers: {}, config: error.config });
   }
 );
 
