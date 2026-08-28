@@ -15,25 +15,49 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// Standalone fallback mock responses for Vercel production demo when localhost backend is blocked by CORS
+// Standalone fallback mock responses for Vercel production demo when backend is unreachable or blocked by CORS
 const MOCK_FALLBACKS = {
   "/dashboard/overview": {
-    active_shipments: 48,
-    high_risk_shipments: 7,
-    delayed_shipments: 12,
-    avg_delay_reduction_days: 2.4,
-    cost_avoided_usd: 48200,
-    time_saved_hours: 184,
-    disruption_alerts_count: 5,
-    recent_alerts: [
-      { id: "ALT-9901", title: "Port Congestion Warning", level: "High", shipment_id: "TS-20260001", created_at: "10 mins ago" },
-      { id: "ALT-9902", title: "Geopolitical Strait Advisory", level: "Warning", shipment_id: "TS-20260004", created_at: "25 mins ago" },
-      { id: "ALT-9903", title: "Severe Typhoon Track", level: "Warning", shipment_id: "TS-20260008", created_at: "1 hour ago" }
+    kpis: {
+      total_active: 126,
+      at_risk: 14,
+      high_risk: 7,
+      predicted_delays: 12,
+      avg_eta_days: 18.4,
+      cost_exposure: 4820000,
+      active_disruptions: 5,
+      recovery_pending: 3
+    },
+    risk_overview: {
+      global: 42,
+      country: 45,
+      port: 58,
+      carrier: 34,
+      customs: 46,
+      geopolitical: 62,
+      weather: 38
+    },
+    disruptions: [
+      { id: "EVT-8801", title: "Singapore Port Anchorage Congestion", location: "Singapore Port", event_type: "Port Delay", severity: "High", detected_at: "2026-08-28T06:00:00Z" },
+      { id: "EVT-8802", title: "Strait of Hormuz Security Advisory", location: "Strait of Hormuz", event_type: "Geopolitical", severity: "Warning", detected_at: "2026-08-28T05:30:00Z" },
+      { id: "EVT-8803", title: "South China Sea Typhoon Warning", location: "South China Sea", event_type: "Weather", severity: "High", detected_at: "2026-08-28T04:15:00Z" }
     ],
-    high_risk_list: [
-      { id: "TS-20260001", tracking_number: "BL-99201", origin: "Shanghai Port", destination: "Rotterdam Port", carrier: "Maersk Line", risk_score: 82, status: "Delayed", delay_days: 3.5, cargo_val: "₹14.5L" },
-      { id: "TS-20260004", tracking_number: "BL-99204", origin: "Singapore Port", destination: "Los Angeles Port", carrier: "MSC", risk_score: 76, status: "In Transit", delay_days: 2.1, cargo_val: "₹8.2L" },
-      { id: "TS-20260008", tracking_number: "BL-99208", origin: "Ningbo Port", destination: "Hamburg Port", carrier: "COSCO", risk_score: 71, status: "Delayed", delay_days: 2.8, cargo_val: "₹9.8L" }
+    map_shipments: [
+      { shipment_id: "TS-20260001", origin: "Shanghai Port", destination: "Rotterdam Port", origin_coords: [31.23, 121.47], dest_coords: [51.92, 4.47], risk_category: "High", status: "Delayed" },
+      { shipment_id: "TS-20260002", origin: "Singapore Port", destination: "Los Angeles Port", origin_coords: [1.35, 103.81], dest_coords: [33.74, -118.27], risk_category: "Moderate", status: "In Transit" },
+      { shipment_id: "TS-20260003", origin: "Ningbo Port", destination: "Hamburg Port", origin_coords: [29.86, 121.54], dest_coords: [53.55, 9.99], risk_category: "High", status: "Delayed" }
+    ],
+    ports: [
+      { name: "Shanghai Port", lat: 31.23, lon: 121.47, status: "Congested" },
+      { name: "Singapore Port", lat: 1.35, lon: 103.81, status: "Normal" },
+      { name: "Rotterdam Port", lat: 51.92, lon: 4.47, status: "Normal" }
+    ],
+    prediction_chart: [
+      { day: "Mon", historical_eta: 14, predicted_eta: 16, delay_probability: 35 },
+      { day: "Tue", historical_eta: 14, predicted_eta: 17, delay_probability: 45 },
+      { day: "Wed", historical_eta: 14, predicted_eta: 18, delay_probability: 60 },
+      { day: "Thu", historical_eta: 14, predicted_eta: 16, delay_probability: 40 },
+      { day: "Fri", historical_eta: 14, predicted_eta: 15, delay_probability: 25 }
     ]
   },
   "/analytics/overview": {
@@ -44,9 +68,9 @@ const MOCK_FALLBACKS = {
   },
   "/shipments": {
     shipments: [
-      { id: "TS-20260001", tracking_number: "BL-99201", origin: "Shanghai Port", destination: "Rotterdam Port", carrier: "Maersk Line", status: "Delayed", risk_score: 82, delay_days: 3.5, cargo_val: 1450000 },
-      { id: "TS-20260002", tracking_number: "BL-99202", origin: "Singapore Port", destination: "Hamburg Port", carrier: "MSC", status: "On Time", risk_score: 18, delay_days: 0.0, cargo_val: 420000 },
-      { id: "TS-20260003", tracking_number: "BL-99203", origin: "Ningbo Port", destination: "Los Angeles Port", carrier: "COSCO", status: "Delayed", risk_score: 74, delay_days: 2.8, cargo_val: 980000 }
+      { id: "TS-20260001", shipment_id: "TS-20260001", tracking_number: "BL-99201", origin: "Shanghai Port", destination: "Rotterdam Port", carrier: "Maersk Line", status: "Delayed", risk_score: 82, delay_days: 3.5, cargo_val: 1450000 },
+      { id: "TS-20260002", shipment_id: "TS-20260002", tracking_number: "BL-99202", origin: "Singapore Port", destination: "Hamburg Port", carrier: "MSC", status: "On Time", risk_score: 18, delay_days: 0.0, cargo_val: 420000 },
+      { id: "TS-20260003", shipment_id: "TS-20260003", tracking_number: "BL-99203", origin: "Ningbo Port", destination: "Los Angeles Port", carrier: "COSCO", status: "Delayed", risk_score: 74, delay_days: 2.8, cargo_val: 980000 }
     ],
     total: 3
   },
