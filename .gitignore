@@ -32,6 +32,12 @@ build/
 **/dist/
 **/build/
 
-# Local Environment Configs
-.env
-.env.local
+# Temporary Prompts & Presentations
+[pP]rompt*.md
+HACK Fusion.md
+keyidea.md
+slide_content.txt
+slide_previews/
+template_dump.json
+scratch_*.py
+*.ps1
